@@ -1,68 +1,77 @@
 def Deject(klass)
-  Deject.new klass
-  klass
+  klass.extend Deject
 end
 
-class Deject
+module Deject
   UninitializedDependency = Class.new StandardError
-  attr_accessor :klass
-  
-  def initialize(klass)
-    self.klass = klass
-    define_dependency_on_klass
-    define_with_dependencies_on_instances
+
+  def dependency(meth, &block)
+    InstanceMethods.new self, meth, block
   end
-  
-  def define_dependency_on_klass
-    deject = self
-    klass.define_singleton_method :dependency do |name, &block|
-      deject.add_dependency name, &block
+
+  class InstanceMethods
+    attr_accessor :klass, :meth, :initializer, :ivar
+
+    def initialize(klass, meth, initializer)
+      self.klass, self.meth, self.initializer, self.ivar = klass, meth, initializer, "@#{meth}"
+      define_getter
+      define_override
+      define_multi_override
+    end
+
+    def define_getter
+      ivar, meth, initializer = self.ivar, self.meth, self.initializer
+      klass.send :define_method, meth do
+        unless instance_variable_defined? ivar
+          instance_variable_set ivar, Deject::Dependency.new(self, meth, initializer)
+        end
+        instance_variable_get(ivar).invoke
+      end
+    end
+
+    def define_override
+      ivar, meth = self.ivar, self.meth
+      klass.send :define_method, "with_#{meth}" do |value=nil, &initializer|
+        initializer ||= Proc.new { value }
+        instance_variable_set ivar, Deject::Dependency.new(self, meth, initializer)
+        self
+      end
+    end
+
+    def define_multi_override
+      klass.send :define_method, :with_dependencies do |overrides|
+        overrides.each { |meth, value| send "with_#{meth}", value }
+        self
+      end
     end
   end
-  
-  def define_with_dependencies_on_instances
-    deject = self
-    klass.send :define_method, :with_dependencies do |overrides|
-      overrides.each { |name, value| send :"with_#{name}", value }
-      self
+
+  class Dependency < Struct.new(:instance, :dependency, :initializer)
+    attr_accessor :result
+
+    def invoke
+      validate_initializer!
+      memoized_result
     end
-  end
-  
-  def add_dependency(name, &block)
-    define_getter name, &block
-    define_override name
-  end
-  
-  def define_getter(name, &block)
-    deject = self
-    klass.send :define_method, name do
-      return deject.get self, name if deject.set? self, name
-      value = instance_eval &(block or deject.raise_for name)
-      deject.set self, name, value
+
+    def validate_initializer!
+      return if initializer
+      raise UninitializedDependency, "#{dependency} invoked before being defined"
     end
-  end
-  
-  def define_override(name)
-    deject = self
-    klass.send :define_method, "with_#{name}" do |value|
-      deject.set self, name, value
-      self
+
+    def memoized_result
+      memoize! unless memoized?
+      result
     end
-  end
-  
-  def raise_for(name)
-    raise Deject::UninitializedDependency, "#{name} invoked before being defined"
-  end
-  
-  def get(instance, name)
-    instance.instance_variable_get :"@#{name}"
-  end
-  
-  def set(instance, name, value)
-    instance.instance_variable_set :"@#{name}", value
-  end
-  
-  def set?(instance, name)
-    instance.instance_variable_defined? :"@#{name}"
+
+    def memoized?
+      @memoized
+    end
+
+    def memoize!
+      @memoized = true
+      self.result = instance.instance_eval &initializer
+    end
   end
 end
+

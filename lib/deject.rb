@@ -1,4 +1,8 @@
-require "deject/version"
+case ENV['deject_implementation']
+when 'object_oriented'
+  require 'deject/object_oriented'
+else
+  require 'deject/functional'
+end
 
-lib_switch = ENV['deject_as_function'] ? 'functional' : 'object_oriented'
-require "deject/#{lib_switch}"
+require "deject/version"
