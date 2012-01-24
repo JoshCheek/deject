@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.authors     = ["Josh Cheek"]
   s.email       = ["josh.cheek@gmail.com"]
   s.homepage    = ""
-  s.summary     = %q{TODO: Write a gem summary}
-  s.description = %q{TODO: Write a gem description}
+  s.summary     = %q{Simple dependency injection}
+  s.description = %q{Provides a super simple API for dependency injection}
 
   s.rubyforge_project = "deject"
 

@@ -74,4 +74,3 @@ module Deject
     end
   end
 end
-

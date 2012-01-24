@@ -10,14 +10,10 @@ def Deject(klass)
   # define klass.dependency
   klass.define_singleton_method :dependency do |meth, &default_block|
 
-    override_for_instance = lambda do |instance, block=nil|
-      value = instance.instance_eval &(block || error_block[meth])
-      instance.define_singleton_method(meth) { value }
-    end
-
     # define the getter
     define_method meth do
-      override_for_instance[self, default_block]
+      value = instance_eval &(default_block || error_block[meth])
+      define_singleton_method(meth) { value }
       send meth
     end
 
@@ -27,7 +23,8 @@ def Deject(klass)
       # redefine getter if given a block
       if block
         define_singleton_method meth do
-          override_for_instance[self, block]
+          value = instance_eval &(block || error_block[meth])
+          define_singleton_method(meth) { value }
           send meth
         end
 
