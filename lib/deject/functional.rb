@@ -1,4 +1,4 @@
-class Deject
+module Deject
   UninitializedDependency = Class.new StandardError
 end
 
