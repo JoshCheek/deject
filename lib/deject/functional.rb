@@ -3,7 +3,7 @@ module Deject
 end
 
 def Deject(klass)
-  error_block = lambda do |meth|
+  uninitialized_error = lambda do |meth|
     raise Deject::UninitializedDependency, "#{meth} invoked before being defined"
   end
 
@@ -12,7 +12,8 @@ def Deject(klass)
 
     # define the getter
     define_method meth do
-      value = instance_eval &(default_block || error_block[meth])
+      uninitialized_error[meth] unless default_block
+      value = instance_eval &default_block
       define_singleton_method(meth) { value }
       send meth
     end
@@ -23,7 +24,7 @@ def Deject(klass)
       # redefine getter if given a block
       if block
         define_singleton_method meth do
-          value = instance_eval &(block || error_block[meth])
+          value = instance_eval &block
           define_singleton_method(meth) { value }
           send meth
         end
