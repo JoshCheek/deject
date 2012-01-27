@@ -6,17 +6,22 @@ module Deject
   UninitializedDependency = Class.new StandardError
 
   def dependency(meth, &block)
-    InstanceMethods.new self, meth, block
+    InstanceMethods.for self, meth, block
   end
+
 
   class InstanceMethods
     attr_accessor :klass, :meth, :initializer, :ivar
+    
+    def self.for(klass, meth, initializer)
+      instance = new klass, meth, initializer
+      instance.define_getter
+      instance.define_override
+      instance.define_multi_override
+    end
 
     def initialize(klass, meth, initializer)
       self.klass, self.meth, self.initializer, self.ivar = klass, meth, initializer, "@#{meth}"
-      define_getter
-      define_override
-      define_multi_override
     end
 
     def define_getter
@@ -45,6 +50,7 @@ module Deject
       end
     end
   end
+
 
   class Dependency < Struct.new(:instance, :dependency, :initializer)
     attr_accessor :result
