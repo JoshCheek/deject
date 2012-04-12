@@ -7,14 +7,14 @@ Gem::Specification.new do |s|
   s.version     = Deject::VERSION
   s.authors     = ["Josh Cheek"]
   s.email       = ["josh.cheek@gmail.com"]
-  s.homepage    = "https://github.com/sdegutis/deject"
+  s.homepage    = "https://github.com/JoshCheek/deject"
   s.summary     = %q{Simple dependency injection}
   s.description = %q{Provides a super simple API for dependency injection}
 
   s.rubyforge_project = "deject"
-
+  
   s.required_ruby_version = "~> 1.9.2"
-
+  
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
