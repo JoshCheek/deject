@@ -44,6 +44,10 @@ class Game
   Deject self
   dependency(:player1) { ComputerPlayer.new }
   dependency :player2
+
+  def name
+    'poker'
+  end
 end
 
 # register a global value (put this into an initializer or dependency injection file)
@@ -65,11 +69,12 @@ Game.new.with_player2 { HumanPlayer.new }.player2.type # => "human player"
 Game.new.with_player2(ComputerPlayer.new).player2.type # => "computer player"
 
 # anywhere a block is used, the instance will be passed into it
-game = Game.new.with_player1 { |game| Struct.new(:type).new "#{game.name} player1" }
-def game.name() "poker" end
+generic_player = Struct.new :type
+
+game = Game.new.with_player1 { |game| generic_player.new "#{game.name} player1" }
 game.player1.type # => "poker player1"
 
-Game.override(:player2) { |game| Struct.new(:type).new "#{game.name} player2" }
+Game.override(:player2) { |game| generic_player.new "#{game.name} player2" }
 game.player2.type # => "poker player2"
 ```
 
@@ -89,7 +94,7 @@ And while it's not the worst thing in the world to do custom dependency injectio
 it still gets obnoxious.
 
 
-Example: try to pass to the initializer does not work when there is already optional args
+Example: passing dependency when initializing
 
 ```ruby
 class SomeClass
@@ -104,13 +109,16 @@ class SomeClass
   end
 
   # forced to deal with the dependency *every place* you use this class
-  def initialize(arg1, some_dependency, arg2=default)
+  def initialize(some_dependency, arg1, arg2=default)
   end
 
-  # okay, that's not too bad unless:
-  #   You want to change the default
-  #
-  #   Your options aren't simple, (e.g. will be passed to some other class as I was dealing with when I decided to write this), then you will have to namespace your options and theirs
+  # okay, this isn't too bad unless:
+  #   1) You want to change the default
+  #   2) You only have one other optional arg
+  #      as you must degrade the interface for this new requirement
+  #   3) Your options aren't simple,
+  #     (e.g. will be passed to some other class as I was dealing with when I decided to write this),
+  #     then you will have to namespace your options and theirs
   def initializing(arg1, options={})
     arg2 = options.fetch(:arg2) { default }
     self.some_dependency = options.fetch(:some_dependency) { default }
@@ -137,12 +145,15 @@ class SomeClass
 end
 
 # blech, that's:
-#   1) complicated (difficult to easily look at and understand -- especially if you had more than one dependency)
-#   2) probably needs explicit tests given that there's quite a bit of indirection and behaviour going on in here
-#   3) the class level override can't take into account anything unique about the instance (ie it must be an object, so must work for all instances)
-#   4) override on the instance like this: instance = SomeClass.new))
-#                                          instance.some_dependency = override
-#                                          instance.whatever
+#   1) complicated -- as in difficult to easily look at and understand
+#      especially if you were to have more than one dependency
+#   2) probably needs explicit tests given that there's quite a bit of
+#      indirection and behaviour going on in here
+#   3) the class level override can't take into account anything unique
+#      about the instance (ie it must be an object, so must work for all instances)
+#   4) instances must be overridden like this: instance = SomeClass.new
+#                                              instance.some_dependency = override
+#                                              instance.whatever
 #      whereas Deject would be like this: SomeClass.new.with_some_dependency(override).whatever
 ```
 
@@ -150,22 +161,24 @@ end
 Example: redefine the method
 
 ```ruby
-    class SomeClass
-      def some_dependency
-        @some_dependency ||= default
-      end
-    end
+class SomeClass
+  def some_dependency
+    @some_dependency ||= default
+  end
+end
 
-    # then later in some other file, totally unbeknownst to anyone reading the above code
-    class SomeClass
-      def some_dependency
-        @some_dependency ||= new_default
-      end
-    end
+# then later in some other file, totally unbeknownst to anyone reading the above code
+class SomeClass
+  def some_dependency
+    @some_dependency ||= new_default
+  end
+end
 
-    # Want to piss off your colleagues? Imagine how long it will take them to figure out why this code doesn't behave as they expect.
-    # What's more, guess what happens when someone refactors that main class... your redefinition of some_dependency just becomes
-    # a definition. It doesn't fail, it has no idea about the method it's overriding.
+# Want to piss off your colleagues? Imagine how long it will take them to figure out
+# why this code doesn't behave as they expect. What's more, guess what happens when
+# someone refactors that main class... your redefinition of some_dependency just becomes
+# a definition. It doesn't fail, it has no idea about the method it's overriding,
+# or the changes that happened to it.
 ```
 
 Compare to Deject
@@ -176,7 +189,8 @@ class SomeClass
   dependency(:some_dependency) { |instance| default }
 end
 
-# straightforward (no one will be surprised when this changes), convenient to override for all instances or any specific instance.
+# straightforward (no one will be surprised when this changes),
+# convenient to override for all instances or any specific instance.
 ```
 
 
@@ -188,31 +202,33 @@ There have been maybe four or five implementations of Deject throughout it's lif
 I ultimately chose the current implementation because it was the easiest to add features to.
 That said, it is not canonical Ruby style code, and will take an open mind to work with.
 
-I intentially chose to avoid using a module because this is pervasive and widely abused in Ruby, for more, see my [blog](http://blog.8thlight.com/josh-cheek/2012/02/03/modules-called-they-want-their-integrity-back.html).
+I intentially chose to avoid using a module because this is pervasive and widely abused in Ruby, for more, see my [blog post](http://blog.8thlight.com/josh-cheek/2012/02/03/modules-called-they-want-their-integrity-back.html).
 I thought a long time about how to add the functionality, thinking about `Deject.execute` or some other verb that the Deject noun could perform.
-But I couldn't think of a good verb. But wait, do I _really_ need a verb? I went and re-read [Execution in the Kingdom of Nouns](http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html)
+But I couldn't think of a good one. But wait, do I _really_ need a verb? I went and re-read [Execution in the Kingdom of Nouns](http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html)
 and decided I was okay with having a method named after the class that applies it, hence `Deject SomeClass`. Not a usual practice
-but not everything needs to be OO.
+but not unheard of, and I don't think it makes sense to force an OO like interface where it doesn't fit well.
 
 We use `with_<dependency>` instead of `dependency=` because taking blocks is grotesque with assignment methods. Further, I have a general
-disdain for assignment methods as they encourage a mindset that is not congruent with OO (though I don't think everything in OOP _needs_ to be an object).
-"When you have a 'setter' on an object, you have turned an object back into a data structure" -- _Alan Kay_.
+disdain for assignment methods as they encourage a mindset that doesn't appreciate the advantages of OO.
+_"When you have a 'setter' on an object, you have turned an object back into a data structure" -- Alan Kay_.
 Furthermore, I nearly always want to be able to override the result inline, which you can't easily do with assignment methods
 as the interpreter guarantees they return the RHS (best solution would be to `tap` the object).
 
 In general, all variables are stored as locals in closures rather than instance variables on the object. This is
 partially due to the implementation (alternative implementations used ivars), and partially because I wanted to
-make a point that relying on ivars is a bad practice. You cannot change implementations if you use the ivar instead
-of the getter (e.g. switch from `attr_accessor` to a struct, or in an `ActiveRecord::Base` subclass, moving a variable
-from a `attr_accessor` into the database). Furthermore, accessing ivars directly requires you to know when they were
+make a point that relying on ivars is a bad practice: You cannot change implementations (without changing all the code using the ivar)
+ if you use the ivar instead of the getter (e.g. switch from `attr_accessor` to a struct, or in an `ActiveRecord::Base` subclass, moving a variable
+from an `attr_accessor` into the database). Furthermore, directly accessing ivars requires you to know when they were
 initialized, which you should not have to deal with, and this also impedes you from extracting the variable into a
-method you inherit from a module (the module can't lazily initialize it, because you access it directly). And it
-even impedes refactoring. If you used to initialize `@full_name` in the initialize method, you cannot decide to
+method you inherit from a module (the module can't lazily initialize it, because their methods are completely bypassed).
+And it even impedes refactoring. If you previously initialized `@full_name` in the `#initialize` method, you could not then decide to
 refactor `def fullname() @fullname end` into `def fullname() "#@firstname #@lastname" end` because users of
-fullname aren't using the method, they're accessing the variable directly. In Deject you don't have a choice,
-you use the methods because there are no variables.
+fullname aren't using the method, they're accessing the variable directly. In general, I think it is best to
+encapsulate from everyone, including other methods in the same object. In Deject you don't have a choice,
+you use the methods because there are no variables. If you'd like to read an argument against my position on this,
+Rick Denatale summarizes Kent Beck's opinion on [ruby-talk](http://www.ruby-forum.com/topic/211544#919648).
 
-Deject does not litter your classes with unexpected methods or variables.
+Deject does not litter your classes or instances with unexpected methods or variables.
 
 
 Special Thanks
