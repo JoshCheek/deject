@@ -84,7 +84,7 @@ game.player2.type # => "poker player2"
 Note that dependencies using the defaults can be declared when dejecting the class:
 
 ```ruby
-lass Game
+class Game
   # this
   Deject self
   dependency :player1
