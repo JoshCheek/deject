@@ -187,7 +187,7 @@ end
 # or the changes that happened to it.
 ```
 
-Compare to Deject
+Compare the above examples to Deject
 
 ```ruby
 class SomeClass
@@ -196,6 +196,7 @@ class SomeClass
 end
 
 # straightforward (no one will be surprised when this changes),
+# declarative so easy to understand
 # convenient to override for all instances or any specific instance.
 ```
 
