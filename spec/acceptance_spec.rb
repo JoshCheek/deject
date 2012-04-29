@@ -62,7 +62,7 @@ describe Deject, 'acceptance tests' do
     # overriding the default at class level
     client = double('Mock Client 2')
     client.should_receive(:login).with('mei')
-    Service.dependency(:client) { client }
+    Service.override(:client) { client }
     Service.new('mei').login
   end
 

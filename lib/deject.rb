@@ -76,7 +76,7 @@ def Deject(klass, *initial_dependencies)
   # define klass.dependency
   klass.define_singleton_method :dependency do |meth, &default_block|
     if instance_exec meth, &has_dependency
-      warn "Deprecation: Use .override instead of .dependency to override a dependency"
+      warn "Deprecation: Use .override instead of .dependency to override a dependency (#{meth})"
     end
     instance_exec meth, default_block, &define_instance_methods
   end

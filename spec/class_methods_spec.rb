@@ -57,8 +57,9 @@ describe 'Klass.dependency' do
   end
 
   it 'writes a deprecated warning when using dependency to override an existing dependency' do
-    catch_stderr { klass.dependency :dep }.should == ""
-    catch_stderr { klass.dependency :dep }.should =~ /deprecat/i
+    catch_stderr { klass.dependency :meth }.should == ""
+    catch_stderr { klass.dependency :meth }.should =~ /deprecat/i
+    catch_stderr { klass.dependency :meth }.should =~ /meth/i
   end
 end
 
