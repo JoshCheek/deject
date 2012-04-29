@@ -32,9 +32,14 @@ describe Deject, '.register and registered' do
     Deject.registered(:abc).should == nil
   end
 
-  it 'raises an ArgumentError error if registration clobbers a previously set value' do
+  it 'does not raise an ArgumentError error if registration clobbers a previously set value' do
     Deject.register(:abc){}
-    expect { Deject.register(:abc){} }.to raise_error ArgumentError, /abc/
+    Deject.register(:abc){}
+  end
+
+  it 'raises an error if registration clobbers a previously set value when passed safe: true' do
+    Deject.register(:abc){}
+    expect { Deject.register(:abc, safe: true){} }.to raise_error ArgumentError, /abc/
   end
 
   it 'knows what has been registered' do

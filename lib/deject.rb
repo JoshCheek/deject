@@ -4,8 +4,8 @@ module Deject
   UninitializedDependency = Class.new StandardError
 
   class << self
-    def register(name, &initializer)
-      raise ArgumentError, "#{name} has been registered multiple times" if registered? name
+    def register(name, options={}, &initializer)
+      raise ArgumentError, "#{name} has been registered multiple times" if options[:safe] && registered?(name)
       raise ArgumentError, "#{name} has been registered with Deject without an initialization block" unless initializer
       @registered[name.intern] = initializer
     end

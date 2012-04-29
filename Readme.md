@@ -51,6 +51,8 @@ class Game
 end
 
 # register a global value (put this into an initializer or dependency injection file)
+# if you are worried about clobbering a previously set value, invoke with `:player2, safe: true`
+# this is turned off by default because I found that code reloading was horking everything up
 Deject.register(:player2) { HumanPlayer.new }
 
 # declared with a block, so will default to block value
