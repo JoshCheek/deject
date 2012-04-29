@@ -26,11 +26,13 @@ module Deject
   reset
 end
 
-# Not a common way of writing code in Ruby, I know.
-# But I tried out several implementations and found this was the easiest to
-# work with within the constraints of the gem (that it doesn't leave traces
-# of itself all over your objects)
-def Deject(klass)
+
+def Deject(klass, *initial_dependencies)
+  # Not a common way of writing code in Ruby, I know.
+  # But I tried out several implementations and found this was the easiest to
+  # work with within the constraints of the gem (that it doesn't leave traces
+  # of itself all over your objects)
+
   uninitialized_error = lambda do |meth|
     raise Deject::UninitializedDependency, "#{meth} invoked before being defined"
   end
@@ -95,6 +97,9 @@ def Deject(klass)
     overrides.each { |meth, value| send "with_#{meth}", value }
     self
   end
+
+  # add the initial dependencies
+  initial_dependencies.each { |dependency| klass.dependency dependency }
 
   klass
 end

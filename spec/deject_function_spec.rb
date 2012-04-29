@@ -18,4 +18,10 @@ describe 'Deject()' do
   it 'returns the class' do
     Deject(klass).should be klass
   end
+
+  let(:default) { :some_default }
+  it "can take a list of dependencies that don't have blocks" do
+    Deject.register(:abc) { default }
+    Deject(klass, :abc).new.abc.should == default
+  end
 end

@@ -80,6 +80,21 @@ Game.override(:player2) { |game| generic_player.new "#{game.name} player2" }
 game.player2.type # => "poker player2"
 ```
 
+
+Note that dependencies using the defaults can be declared when dejecting the class:
+
+```ruby
+lass Game
+  # this
+  Deject self
+  dependency :player1
+  dependency :player2
+
+  # is the same as this
+  Deject self, :player1, :player2
+end
+```
+
 Reasons
 =======
 
