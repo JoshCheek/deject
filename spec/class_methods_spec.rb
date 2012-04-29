@@ -20,10 +20,19 @@ describe 'Klass.dependency' do
       klass.new.send(meth).should == result
     end
 
-    specify 'the instance method is evaluated within the context of the instance' do
+    specify 'the instance method is evaluated within the context of the caller' do
       klass.dependency(:a) { b }
       instance = klass.new
       def instance.b() 10 end
+      def self.b() 20 end
+      instance.a.should == self.b
+    end
+
+    specify 'the instance method is passed the instance' do
+      klass.dependency(:a) { |instance| instance.b }
+      instance = klass.new
+      def instance.b() 10 end
+      def self.b() end
       instance.a.should == instance.b
     end
   end

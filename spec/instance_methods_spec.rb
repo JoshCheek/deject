@@ -27,7 +27,7 @@ describe 'after initializing a dependency' do
     klass.dependency(:number1) { 1 }
     klass.dependency(:number2) { 2 }
     i = 0
-    instance = klass.new.with_number2 { i += number1 }
+    instance = klass.new.with_number2 { |instance| i += instance.number1 }
     instance.number2.should == instance.number1
     instance.number2.should == instance.number1
     i.should == instance.number1
@@ -42,5 +42,12 @@ describe 'after initializing a dependency' do
     instance = klass.new.with_dependencies(a: 10, b: 20)
     instance.a.should == 10
     instance.b.should == 20
+  end
+
+  specify '#with_<dependency> is passed the instance' do
+    klass.dependency(:a) { |instance| instance.b }
+    instance = klass.new
+    def instance.b() 10 end
+    instance.a.should == instance.b
   end
 end

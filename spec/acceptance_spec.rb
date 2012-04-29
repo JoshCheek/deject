@@ -22,13 +22,13 @@ describe Deject, 'acceptance tests' do
 
     class Service
       Deject self
-      dependency(:client) { Client.new credentials }
+      dependency(:client) { |service| Client.new service.credentials }
 
       attr_accessor :name
 
       def initialize(name)
         self.name = name
-      end        
+      end
 
       def login
         client.login name
@@ -51,7 +51,7 @@ describe Deject, 'acceptance tests' do
     Service.new('sally').with_client(client).login
 
     client_class, client = double, double
-    george = Service.new('george').with_client { client_class.new credentials }
+    george = Service.new('george').with_client { |service| client_class.new service.credentials }
     client_class.should_receive(:new).with(george.credentials).and_return(client)
     client.should_receive(:login).with('george')
     george.login

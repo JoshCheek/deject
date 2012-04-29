@@ -17,7 +17,7 @@ def Deject(klass)
     # define the getter
     define_method meth do
       uninitialized_error[meth] unless default_block
-      value = instance_eval &default_block
+      value = default_block.call self
       define_singleton_method(meth) { value }
       send meth
     end
@@ -28,7 +28,7 @@ def Deject(klass)
       # redefine getter if given a block
       if block
         define_singleton_method meth do
-          value = instance_eval &block
+          value = block.call self
           define_singleton_method(meth) { value }
           send meth
         end
