@@ -22,62 +22,51 @@ Example
 ```ruby
 require 'deject'
 
-class HumanPlayer
-  def type
-    'human player'
-  end
-end
-
-class ComputerPlayer
-  def type
-    'computer player'
-  end
-end
-
-class MockPlayer
-  def type
-    'mock player'
-  end
-end
-
-class Game
-  Deject self
-  dependency(:player1) { ComputerPlayer.new }
-  dependency :player2
-
-  def name
-    'poker'
-  end
-end
-
 # register a global value (put this into an initializer or dependency injection file)
-# if you are worried about clobbering a previously set value, invoke with `:player2, safe: true`
+# if you are worried about clobbering a previously registered value, invoke with `:player2, safe: true`
 # this is turned off by default because I found that code reloading was horking everything up
 Deject.register(:player2) { HumanPlayer.new }
 
-# declared with a block, so will default to block value
-Game.new.player1.type # => "computer player"
+# some players you want to inject
+HumanPlayer    = Class.new
+ComputerPlayer = Class.new
+MockPlayer     = Class.new
 
-# declared without a block, so will default to the global definition for player1
-Game.new.player2.type # => "human player"
+# Game needs some players, but doesn't know what kinds to use!
+Game = Struct.new :name do
+  Deject self
+  dependency(:player1) { ComputerPlayer.new } # Game#player1 will default to computer player
+  dependency :player2                         # Game#player2 will default to registered value
+end
+
+# declared with a block, so will default to block value
+Game.new.player1.class # => ComputerPlayer
+
+# declared without a block, so will default to the registered value for player2
+Game.new.player2.class # => HumanPlayer
 
 # we can override for this entire class
 Game.override(:player2) { MockPlayer.new }
-Game.new.player2.type # => "mock player"
+Game.new.player2.class # => MockPlayer
 
 # we can override for some specific instance using either a block or a value
 # instance level overriding is done using method with_<dependnecy_name>, which returns the instance
-Game.new.with_player2 { HumanPlayer.new }.player2.type # => "human player"
-Game.new.with_player2(ComputerPlayer.new).player2.type # => "computer player"
+Game.new.with_player2 { HumanPlayer.new }.player2.class # => HumanPlayer
+Game.new.with_player2(ComputerPlayer.new).player2.class # => ComputerPlayer
 
 # anywhere a block is used, the instance will be passed into it
-generic_player = Struct.new :type
+monopoly = Game.new 'Monopoly'
+chatty_player = Struct.new :message
 
-game = Game.new.with_player1 { |game| generic_player.new "#{game.name} player1" }
-game.player1.type # => "poker player1"
+monopoly.with_player1 { |game| chatty_player.new "Your mom sucks at #{game.name}" } # an antagonistic player
+monopoly.player1.message # => "Your mom sucks at Monopoly"
 
-Game.override(:player2) { |game| generic_player.new "#{game.name} player2" }
-game.player2.type # => "poker player2"
+Game.override(:player2) { |game| chatty_player.new "You're very good at the #{game.name}s!" } # a supportive player
+monopoly.player2.message # => "You're very good at the Monopolys!"
+
+# results are memoized:
+monopoly.name = 'Clue Jr.'
+monopoly.player2.message # => "You're very good at the Monopolys!"
 ```
 
 
