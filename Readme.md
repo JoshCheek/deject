@@ -19,80 +19,63 @@ If you have to use sudo and you don't know why, it's because you need to set you
 Example
 =======
 
-    require 'deject'
+```ruby
+require 'deject'
 
-    # Represents some client like https://github.com/voloko/twitter-stream
-    # Some client that will be used by our service
-    class Client
-      def initialize(credentials)
-        @credentials = credentials
-      end
+class HumanPlayer
+  def type
+    'human player'
+  end
+end
 
-      def login(name)
-        @login = name
-      end
+class ComputerPlayer
+  def type
+    'computer player'
+  end
+end
 
-      def has_logged_in?(name) # !> `&' interpreted as argument prefix
-        @login == name
-      end
+class MockPlayer
+  def type
+    'mock player'
+  end
+end
 
-      def initialized_with?(credentials)
-        @credentials == credentials
-      end
-    end
+class Game
+  Deject self
+  dependency(:player1) { ComputerPlayer.new }
+  dependency :player2
+end
 
+# register a global value (put this into an initializer or dependency injection file)
+Deject.register(:player2) { HumanPlayer.new }
 
-    class Service
-      Deject self # <-- we'll talk more about this later
+# declared with a block, so will default to block value
+Game.new.player1.type # => "computer player"
 
-      # you can basically think of the block as a factory that
-      # returns a client. It is evaluated in the context of the instance
-      # ...though I'm not sure that's a good strategy to employ
-      #    (I suspect it would be better that these return constants as much as possible)
-      dependency(:client) { Client.new credentials }
+# declared without a block, so will default to the global definition for player1
+Game.new.player2.type # => "human player"
 
-      attr_accessor :name
+# we can override for this entire class
+Game.override(:player2) { MockPlayer.new }
+Game.new.player2.type # => "mock player"
 
-      def initialize(name)
-        self.name = name
-      end        
+# we can override for some specific instance using either a block or a value
+# instance level overriding is done using method with_<dependnecy_name>, which returns the instance
+Game.new.with_player2 { HumanPlayer.new }.player2.type # => "human player"
+Game.new.with_player2(ComputerPlayer.new).player2.type # => "computer player"
 
-      def login
-        client.login name
-      end
+# anywhere a block is used, the instance will be passed into it
+game = Game.new.with_player1 { |game| Struct.new(:type).new "#{game.name} player1" }
+def game.name() "poker" end
+game.player1.type # => "poker player1"
 
-      def credentials
-        # a login key or something, would probably be dejected as well
-        # to retrieve the result from some config file or service
-        'skj123@#KLFNV9ajv'
-      end
-    end
+Game.override(:player2) { |game| Struct.new(:type).new "#{game.name} player2" }
+game.player2.type # => "poker player2"
+```
 
-    # using the default
-    service = Service.new('josh')
-    service.login
-    service.client # => #<Client:0x007ff97a92d9b8 @credentials="skj123@#KLFNV9ajv", @login="josh">
-    service.client.has_logged_in? 'josh' # => true
-    service.client.initialized_with? service.credentials # => true
-
-    # overriding the default at instance level
-    client_mock = Struct.new :recordings do
-      def method_missing(*args)
-        self.recordings ||= []
-        recordings << args
-      end
-    end
-    client = client_mock.new
-    sally = Service.new('sally').with_client client # <-- you can also override with a block
-
-    sally.login
-    client.recordings # => [[:login, "sally"]]
-
-    sally.login
-    client.recordings # => [[:login, "sally"], [:login, "sally"]]
-    
 Reasons
 =======
+
 
 Why write this?
 ---------------
@@ -103,83 +86,139 @@ So when you go to test, it sucks. When you want to reuse, it sucks. How to get a
 Inject your dependencies.
 
 And while it's not the worst thing in the world to do custom dependency injection in Ruby,
-it can still get obnoxious. What do you do? There's basically two options:
-
-1. Add it as an argument when initializing (or _possibly_ when invoking your method). This works
-   fine if you aren't already doing anything complicated with your arguments. If you can just throw
-   an optional arg in there for the dependency, giving it a default of the hard dependency, then
-   it's not too big of a deal. But what if you have two dependencies? Then you can't use optional
-   arguments, because how will you know which is which? What if you're already taking optional args?
-   Then again, you can't pass this in optionally. So you have to set it to an ordinal argument, which
-   means that everywhere you use the thing, you have to deal with the dependency. It's cumbersome and ugly.
-   Or you can pass it in with an options hash, but what if you're already taking a hash (as I was when
-   I decided I wanted this) and it's not for this object? Then you have to namespace the common options
-   such that you can tell them apart, it's gross (e.g. passing html options to a form in Rails), and you
-   only need to do it for something that users shouldn't need to care about unless they really want to.
-
-2. Defining methods to return the dependency that can be overridden by setting the value. This is a heavier
-   choice than the above, but it can become necessary. Define an `attr_writer :whatever` and a getter
-   whose body looks like `@whatever ||= HardDependency.new`. Not the worst thing in the world, but it takes
-   about four lines and clutters things up. What's more, it must be set with a setter, and setters always
-   return the RHS of the assignment. So to override it, you have to have three lines where you probably only want one.
-   And of course, having a real method in there is a statement. It says "this is the implementation", people
-   don't override methods all willy nilly, I'd give dirty looks to colleagues if they overrode it as was convenient.
-   For instance, say you _always_ want to override the default (e.g. a FakeUser in the test environment and User in
-   development/production environments). Then you have to open the class and redefine it in an initialization file.
-   Not cool.
-
-Deject handles these shortcomings with the default ways to inject dependencies. Declaring something a dependency
-inherently identifies it as overridable. Overriding it by environment is not shocking or unexpected, and only requires one line,
-and has the advantage of closures during overriding -- as opposed to having to metaprogramming to set that default.
-
-It makes it very easy to declare and to override dependencies, by adding an inline call to the override.
-You don't have to deal with arguments, you don't have to define methods, it defines the methods for you
-and gives you an easy way to inject a new value. In the end, it's simpler and easier to understand.
+it still gets obnoxious.
 
 
-Statements I am trying to make by writing this
-----------------------------------------------
+Example: try to pass to the initializer does not work when there is already optional args
 
-Dependencies should be soft by default, dependency injection can have a place in Ruby
-(even though I'll probably get made fun of for it). I acknowledge that I really enjoyed
-the post [Why I love everything you hate about Java](http://magicscalingsprinkles.wordpress.com/2010/02/08/why-i-love-everything-you-hate-about-java/).
-Though I agreed with a lot of the rebuttals in the comments as well.
+```ruby
+class SomeClass
+  attr_accessor :some_dependency
 
-I intentionally didn't do this with module inclusion. Module inclusion has become a cancer
-(I'll probably write a blog about that later). _Especially_ the way people abuse the `self.included` hook.
-I wanted to show people that you don't _HAVE_ to do that. There's no reason your module can't have
-a method that is truthful about its purpose, something like `MyModule.apply_to MyClass`, it can include and extend
-in there all it wants. That's fine, that's obvious, it isn't lying. But when people `include MyModule`
-just so they can get into the included hook (where they almost never need to) and then **EXTEND** the class... grrrrr.
+  # cannot set this unless also setting arg2
+  def initialize(arg1, arg2=default, some_dependency=default)
+  end
 
-And of course, after I decided I wasn't going to directly include / extend the module, I began
-thinking about how to get Deject onto the class. `Deject.dejectify SomeClass`? Couldn't think of
-a good verb. But wait, do I _really_ need a verb? I went and read
-[Execution in the Kingdom of Nouns](http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html)
-and decided I was okay with having a method that applies it, hence `Deject SomeClass`. Not a usual practice
-but not everything needs to be OO. Which led to the next realization that I didn't need a module at all.
+  # cannot set arg2 without being forced to set dependency
+  def initialize(arg1, some_dependency=default, arg2=default)
+  end
 
-So, there's two implementations. You can set which one you want to use with an environment variable (not that you care).
-The first is "functional" which is to say that I was trying to channel functional ideas when writing it. It's really just one
-big function that defines and redefines methods. Initially I hated this, I found it very difficult to read (might have been
-better if Ruby had macros), I had to add comments in to keep track of what was happening.
-But then I wrote the object oriented implementation, and it was pretty opaque as well.
-Plus there were a lot of things I wanted to do that were very difficult to accomplish, and it was much longer.
+  # forced to deal with the dependency *every place* you use this class
+  def initialize(arg1, some_dependency, arg2=default)
+  end
 
-So in the end, I'm hoping someone takes the time to look at both implementations and gives me feedback on their thoughts
-Is one better? Are they each better in certain ways? Can this code be made simpler? Any feedback is welcome.
+  # okay, that's not too bad unless:
+  #   You want to change the default
+  #
+  #   Your options aren't simple, (e.g. will be passed to some other class as I was dealing with when I decided to write this), then you will have to namespace your options and theirs
+  def initializing(arg1, options={})
+    arg2 = options.fetch(:arg2) { default }
+    self.some_dependency = options.fetch(:some_dependency) { default }
+  end
+end
+```
 
-Oh, I also intentionally used closures over local variables rather than instance variables, because I
-wanted to make people realize it's better to use setters and getters than to directly access instance variables
-(to be fair, there are some big names that [disagree with](http://www.ruby-forum.com/topic/211544#919648) me on this).
-I think most people directly access ivars because they haven't found themselves in a situation where it mattered.
-But what if `attr_accessor` wound up changing implementations such that it didn't use ivars? "Ridiculous" I can hear
-people saying, but it's not so ridiculous when you realize that you can remove 4 redundant lines by inheriting from
-a Struct. If you use indirect access, everything still works just fine. And structs aren't the only place this occurs,
-think about ActiveRecord::Base, it doesn't use ivars, so if you use attr_accessor in your model somewhere, you need to
-know how a given attribute was defined so that you can know if you should use ivars or not... terrible. Deject's functional
-implementation does not use ivars, you **must** use the getter and the overrider (there isn't currently a setter).
-That is intentional (though I used ivars in the OO implementation).
+
+Example: try to set it in a method that you change later
+
+```ruby
+class SomeClass
+  class << self
+    attr_writer :some_dependency
+    def some_dependency(instance)
+      @some_dependency ||= default
+    end
+  end
+
+  attr_writer :some_dependency
+  def some_dependency
+    @some_dependency ||= self.class.some_dependency self
+  end
+end
+
+# blech, that's:
+#   1) complicated (difficult to easily look at and understand -- especially if you had more than one dependency)
+#   2) probably needs explicit tests given that there's quite a bit of indirection and behaviour going on in here
+#   3) the class level override can't take into account anything unique about the instance (ie it must be an object, so must work for all instances)
+#   4) override on the instance like this: instance = SomeClass.new))
+#                                          instance.some_dependency = override
+#                                          instance.whatever
+#      whereas Deject would be like this: SomeClass.new.with_some_dependency(override).whatever
+```
+
+
+Example: redefine the method
+
+```ruby
+    class SomeClass
+      def some_dependency
+        @some_dependency ||= default
+      end
+    end
+
+    # then later in some other file, totally unbeknownst to anyone reading the above code
+    class SomeClass
+      def some_dependency
+        @some_dependency ||= new_default
+      end
+    end
+
+    # Want to piss off your colleagues? Imagine how long it will take them to figure out why this code doesn't behave as they expect.
+    # What's more, guess what happens when someone refactors that main class... your redefinition of some_dependency just becomes
+    # a definition. It doesn't fail, it has no idea about the method it's overriding.
+```
+
+Compare to Deject
+
+```ruby
+class SomeClass
+  Deject self
+  dependency(:some_dependency) { |instance| default }
+end
+
+# straightforward (no one will be surprised when this changes), convenient to override for all instances or any specific instance.
+```
+
+
+
+About the Code
+--------------
+
+There have been maybe four or five implementations of Deject throughout it's life (though I think only two were ever committed to the repo).
+I ultimately chose the current implementation because it was the easiest to add features to.
+That said, it is not canonical Ruby style code, and will take an open mind to work with.
+
+I intentially chose to avoid using a module because this is pervasive and widely abused in Ruby, for more, see my [blog](http://blog.8thlight.com/josh-cheek/2012/02/03/modules-called-they-want-their-integrity-back.html).
+I thought a long time about how to add the functionality, thinking about `Deject.execute` or some other verb that the Deject noun could perform.
+But I couldn't think of a good verb. But wait, do I _really_ need a verb? I went and re-read [Execution in the Kingdom of Nouns](http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html)
+and decided I was okay with having a method named after the class that applies it, hence `Deject SomeClass`. Not a usual practice
+but not everything needs to be OO.
+
+We use `with_<dependency>` instead of `dependency=` because taking blocks is grotesque with assignment methods. Further, I have a general
+disdain for assignment methods as they encourage a mindset that is not congruent with OO (though I don't think everything in OOP _needs_ to be an object).
+"When you have a 'setter' on an object, you have turned an object back into a data structure" -- _Alan Kay_.
+Furthermore, I nearly always want to be able to override the result inline, which you can't easily do with assignment methods
+as the interpreter guarantees they return the RHS (best solution would be to `tap` the object).
+
+In general, all variables are stored as locals in closures rather than instance variables on the object. This is
+partially due to the implementation (alternative implementations used ivars), and partially because I wanted to
+make a point that relying on ivars is a bad practice. You cannot change implementations if you use the ivar instead
+of the getter (e.g. switch from `attr_accessor` to a struct, or in an `ActiveRecord::Base` subclass, moving a variable
+from a `attr_accessor` into the database). Furthermore, accessing ivars directly requires you to know when they were
+initialized, which you should not have to deal with, and this also impedes you from extracting the variable into a
+method you inherit from a module (the module can't lazily initialize it, because you access it directly). And it
+even impedes refactoring. If you used to initialize `@full_name` in the initialize method, you cannot decide to
+refactor `def fullname() @fullname end` into `def fullname() "#@firstname #@lastname" end` because users of
+fullname aren't using the method, they're accessing the variable directly. In Deject you don't have a choice,
+you use the methods because there are no variables.
+
+Deject does not litter your classes with unexpected methods or variables.
+
+
+Special Thanks
+==============
+
+To the [8th Light](http://8thlight.com/)ers who have provided feedback, questions, and criticisms.
 
 
 Todo
