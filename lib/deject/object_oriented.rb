@@ -6,13 +6,18 @@ module Deject
   UninitializedDependency = Class.new StandardError
 
   def dependency(meth, &block)
+    instance_variable_set "@#{meth}", block
     InstanceMethods.for self, meth, block
+  end
+
+  def override(meth, &block)
+    instance_variable_set "@#{meth}", block
   end
 
 
   class InstanceMethods
     attr_accessor :klass, :meth, :initializer, :ivar
-    
+
     def self.for(klass, meth, initializer)
       instance = new klass, meth, initializer
       instance.define_getter
@@ -27,10 +32,11 @@ module Deject
     def define_getter
       ivar, meth, initializer = self.ivar, self.meth, self.initializer
       klass.send :define_method, meth do
-        unless instance_variable_defined? ivar
+        if instance_variable_defined? ivar
+          instance_variable_get(ivar).invoke
+        else
           instance_variable_set ivar, Deject::Dependency.new(self, meth, initializer)
         end
-        instance_variable_get(ivar).invoke
       end
     end
 
