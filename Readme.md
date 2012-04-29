@@ -215,11 +215,12 @@ But I couldn't think of a good one. But wait, do I _really_ need a verb? I went 
 and decided I was okay with having a method named after the class that applies it, hence `Deject SomeClass`. Not a usual practice
 but not unheard of, and I don't think it makes sense to force an OO like interface where it doesn't fit well.
 
-We use `with_<dependency>` instead of `dependency=` because taking blocks is grotesque with assignment methods. Further, I have a general
+We use `with_<dependency>` instead of `dependency=` because taking blocks is grotesque with assignment methods. I have a general
 disdain for assignment methods as they encourage a mindset that doesn't appreciate the advantages of OO.
 _"When you have a 'setter' on an object, you have turned an object back into a data structure" -- Alan Kay_.
 Furthermore, I nearly always want to be able to override the result inline, which you can't easily do with assignment methods
 as the interpreter guarantees they return the RHS (best solution would be to `tap` the object).
+The `with_<name>` pattern is a common pattern in [IO](http://iolanguage.com/).
 
 In general, all variables are stored as locals in closures rather than instance variables on the object. This is
 partially due to the implementation (alternative implementations used ivars), and partially because I wanted to
