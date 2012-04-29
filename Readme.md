@@ -18,79 +18,81 @@ If you have to use sudo and you don't know why, it's because you need to set you
 
 Example
 =======
+```ruby
 
-    require 'deject'
+require 'deject'
 
-    # Represents some client like https://github.com/voloko/twitter-stream
-    # Some client that will be used by our service
-    class Client
-      def initialize(credentials)
-        @credentials = credentials
-      end
+# Represents some client like https://github.com/voloko/twitter-stream
+# Some client that will be used by our service
+class Client
+  def initialize(credentials)
+    @credentials = credentials
+  end
 
-      def login(name)
-        @login = name
-      end
+  def login(name)
+    @login = name
+  end
 
-      def has_logged_in?(name) # !> `&' interpreted as argument prefix
-        @login == name
-      end
+  def has_logged_in?(name) # !> `&' interpreted as argument prefix
+    @login == name
+  end
 
-      def initialized_with?(credentials)
-        @credentials == credentials
-      end
-    end
+  def initialized_with?(credentials)
+    @credentials == credentials
+  end
+end
 
 
-    class Service
-      Deject self # <-- we'll talk more about this later
+class Service
+  Deject self # <-- we'll talk more about this later
 
-      # you can basically think of the block as a factory that
-      # returns a client. It is evaluated in the context of the instance
-      # ...though I'm not sure that's a good strategy to employ
-      #    (I suspect it would be better that these return constants as much as possible)
-      dependency(:client) { Client.new credentials }
+  # you can basically think of the block as a factory that
+  # returns a client. It is evaluated in the context of the instance
+  # ...though I'm not sure that's a good strategy to employ
+  #    (I suspect it would be better that these return constants as much as possible)
+  dependency(:client) { Client.new credentials }
 
-      attr_accessor :name
+  attr_accessor :name
 
-      def initialize(name)
-        self.name = name
-      end        
+  def initialize(name)
+    self.name = name
+  end
 
-      def login
-        client.login name
-      end
+  def login
+    client.login name
+  end
 
-      def credentials
-        # a login key or something, would probably be dejected as well
-        # to retrieve the result from some config file or service
-        'skj123@#KLFNV9ajv'
-      end
-    end
+  def credentials
+    # a login key or something, would probably be dejected as well
+    # to retrieve the result from some config file or service
+    'skj123@#KLFNV9ajv'
+  end
+end
 
-    # using the default
-    service = Service.new('josh')
-    service.login
-    service.client # => #<Client:0x007ff97a92d9b8 @credentials="skj123@#KLFNV9ajv", @login="josh">
-    service.client.has_logged_in? 'josh' # => true
-    service.client.initialized_with? service.credentials # => true
+# using the default
+service = Service.new('josh')
+service.login
+service.client # => #<Client:0x007ff97a92d9b8 @credentials="skj123@#KLFNV9ajv", @login="josh">
+service.client.has_logged_in? 'josh' # => true
+service.client.initialized_with? service.credentials # => true
 
-    # overriding the default at instance level
-    client_mock = Struct.new :recordings do
-      def method_missing(*args)
-        self.recordings ||= []
-        recordings << args
-      end
-    end
-    client = client_mock.new
-    sally = Service.new('sally').with_client client # <-- you can also override with a block
+# overriding the default at instance level
+client_mock = Struct.new :recordings do
+  def method_missing(*args)
+    self.recordings ||= []
+    recordings << args
+  end
+end
+client = client_mock.new
+sally = Service.new('sally').with_client client # <-- you can also override with a block
 
-    sally.login
-    client.recordings # => [[:login, "sally"]]
+sally.login
+client.recordings # => [[:login, "sally"]]
 
-    sally.login
-    client.recordings # => [[:login, "sally"], [:login, "sally"]]
-    
+sally.login
+client.recordings # => [[:login, "sally"], [:login, "sally"]]
+```
+
 Reasons
 =======
 
