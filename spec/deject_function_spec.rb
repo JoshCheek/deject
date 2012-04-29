@@ -1,4 +1,4 @@
-require 'deject'
+require 'spec_helper'
 
 describe 'Deject()' do
   let(:klass) { Class.new }

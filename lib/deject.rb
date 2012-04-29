@@ -2,6 +2,28 @@ require "deject/version"
 
 module Deject
   UninitializedDependency = Class.new StandardError
+
+  class << self
+    def register(name, &initializer)
+      raise ArgumentError, "#{name} has been registered multiple times" if registered? name
+      raise ArgumentError, "#{name} has been registered with Deject without an initialization block" unless initializer
+      @registered[name.intern] = initializer
+    end
+
+    def registered(name)
+      @registered[name.intern]
+    end
+
+    def registered?(name)
+      @registered.has_key? name.intern
+    end
+
+    def reset
+      @registered = {}
+    end
+  end
+
+  reset
 end
 
 # Not a common way of writing code in Ruby, I know.
@@ -16,8 +38,9 @@ def Deject(klass)
   define_instance_methods = lambda do |meth, default_block|
     # define the getter
     define_method meth do
-      uninitialized_error[meth] unless default_block
-      value = default_block.call self
+      block = default_block || Deject.registered(meth)
+      uninitialized_error[meth] unless block
+      value = block.call self
       define_singleton_method(meth) { value }
       send meth
     end

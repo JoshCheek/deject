@@ -1,3 +1,5 @@
+require 'deject'
+
 catch_stderr = Module.new do
   require 'stringio'
 

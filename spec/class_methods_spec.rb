@@ -1,4 +1,3 @@
-require 'deject'
 require 'spec_helper'
 
 
@@ -46,6 +45,14 @@ describe 'Klass.dependency' do
     it 'raises an error if called before setting it' do
       klass.dependency :jjjjj
       expect { klass.new.jjjjj }.to raise_error(Deject::UninitializedDependency, /jjjjj/)
+    end
+
+    it 'uses the global block if provided, passing it the instance' do
+      Deject.register(:meth) { |instance| instance.value }
+      klass.dependency :meth
+      instance = klass.new
+      def instance.value() :value end
+      instance.meth.should == :value
     end
   end
 

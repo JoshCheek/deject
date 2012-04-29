@@ -1,4 +1,4 @@
-require 'deject'
+require 'spec_helper'
 
 describe Deject, 'acceptance tests' do
   example 'setting and overriding' do

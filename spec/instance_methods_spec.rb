@@ -1,4 +1,4 @@
-require 'deject'
+require 'spec_helper'
 
 describe 'after initializing a dependency' do
   let(:klass) { Deject Class.new }
