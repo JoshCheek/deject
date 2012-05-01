@@ -75,7 +75,7 @@ Game.new.with_player { MockPlayer.new }.player # => #<MockPlayer:0x007fb2a10155f
 ```
 
 Set a global default value to be used when a value isn't explicitly provided.
-If you are worried about clobbering a previously registered value, invoke with `:player2, safe: true`
+If you are worried about clobbering a previously registered value, invoke as `.register(:player2, safe: true)`
 this is turned off by default because I found that code reloading was horking everything up.
 
 ```ruby
