@@ -303,7 +303,8 @@ Deject does not litter your classes or instances with unexpected methods or vari
 Special Thanks
 ==============
 
-To the [8th Light](http://8thlight.com/)ers who have provided feedback, questions, and criticisms.
+* To [Enova](http://www.enovafinancial.com/) for helping me find the best use cases and most relevant missing features.
+* To the [8th Light](http://8thlight.com/)ers who have provided feedback, questions, and criticisms.
 
 
 Todo
