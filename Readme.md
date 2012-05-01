@@ -16,73 +16,134 @@ On some systems:
 
 If you have to use sudo and you don't know why, it's because you need to set your GEM_HOME environment variable.
 
-Example
-=======
+Examples
+========
 
-```ruby
-require 'deject'
-
-# register a global value (put this into an initializer or dependency injection file)
-# if you are worried about clobbering a previously registered value, invoke with `:player2, safe: true`
-# this is turned off by default because I found that code reloading was horking everything up
-Deject.register(:player2) { HumanPlayer.new }
-
-# some players you want to inject
-HumanPlayer    = Class.new
-ComputerPlayer = Class.new
-MockPlayer     = Class.new
-
-# Game needs some players, but doesn't know what kinds to use!
-Game = Struct.new :name do
-  Deject self
-  dependency(:player1) { ComputerPlayer.new } # Game#player1 will default to computer player
-  dependency :player2                         # Game#player2 will default to registered value
-end
-
-# declared with a block, so will default to block value
-Game.new.player1.class # => ComputerPlayer
-
-# declared without a block, so will default to the registered value for player2
-Game.new.player2.class # => HumanPlayer
-
-# we can override for this entire class
-Game.override(:player2) { MockPlayer.new }
-Game.new.player2.class # => MockPlayer
-
-# we can override for some specific instance using either a block or a value
-# instance level overriding is done using method with_<dependnecy_name>, which returns the instance
-Game.new.with_player2 { HumanPlayer.new }.player2.class # => HumanPlayer
-Game.new.with_player2(ComputerPlayer.new).player2.class # => ComputerPlayer
-
-# anywhere a block is used, the instance will be passed into it
-monopoly = Game.new 'Monopoly'
-chatty_player = Struct.new :message
-
-monopoly.with_player1 { |game| chatty_player.new "Your mom sucks at #{game.name}" } # an antagonistic player
-monopoly.player1.message # => "Your mom sucks at Monopoly"
-
-Game.override(:player2) { |game| chatty_player.new "You're very good at the #{game.name}s!" } # a supportive player
-monopoly.player2.message # => "You're very good at the Monopolys!"
-
-# results are memoized:
-monopoly.name = 'Clue Jr.'
-monopoly.player2.message # => "You're very good at the Monopolys!"
-```
-
-
-Note that dependencies using the defaults can be declared when dejecting the class:
+Add Deject to your class.
 
 ```ruby
 class Game
-  # this
   Deject self
-  dependency :player1
-  dependency :player2
-
-  # is the same as this
-  Deject self, :player1, :player2
 end
 ```
+
+Declare a dependency with a default.
+
+```ruby
+ComputerPlayer = Class.new
+
+class Game
+  Deject self
+  dependency(:player) { ComputerPlayer.new }
+end
+
+Game.new.player # => #<ComputerPlayer:0x007fb504945f28>
+```
+
+Override the dependency for the class.
+
+```ruby
+ComputerPlayer = Class.new
+HumanPlayer    = Class.new
+
+class Game
+  Deject self
+  dependency(:player) { ComputerPlayer.new }
+end
+
+Game.override(:player) { HumanPlayer.new } # in some initialization file
+
+Game.new.player # => #<HumanPlayer:0x007fde2d8ac880>
+```
+
+Override the dependency for an instance by using `#with_<dependency>`. You can
+pass a specific object, or a block for lazy initialization. This method returns
+the instance.
+
+```ruby
+ComputerPlayer = Class.new
+HumanPlayer    = Class.new
+MockPlayer     = Class.new
+
+class Game
+  Deject self
+  dependency(:player) { ComputerPlayer.new }
+end
+
+Game.new.with_player(HumanPlayer.new).player   # => #<HumanPlayer:0x007fb2a1015e40>
+Game.new.with_player { MockPlayer.new }.player # => #<MockPlayer:0x007fb2a10155f8>
+```
+
+Set a global default value to be used when a value isn't explicitly provided.
+If you are worried about clobbering a previously registered value, invoke with `:player2, safe: true`
+this is turned off by default because I found that code reloading was horking everything up.
+
+```ruby
+ComputerPlayer = Class.new
+HumanPlayer    = Class.new
+
+# these would go in some initialization file
+Deject.register(:player1) { ComputerPlayer.new }
+Deject.register(:player2) { ComputerPlayer.new }
+
+class Game
+  Deject self
+  dependency(:player1) { HumanPlayer.new }
+  dependency :player2
+end
+
+Game.new.player1 # => #<HumanPlayer:0x007fed8212d7d0>
+Game.new.player2 # => #<ComputerPlayer:0x007fed8212d348>
+```
+
+Dependencies without a default block can passed to the Deject function.
+
+```ruby
+ComputerPlayer = Class.new
+
+class Game
+  Deject self, :player
+end
+
+Game.new.with_player(ComputerPlayer.new).player # => #<ComputerPlayer:0x007fac2393a248>
+```
+
+Anywhere a block is used, the instance is passed to it.
+
+```ruby
+ChattyPlayer = Struct.new :message
+
+class Game < Struct.new(:name)
+  Deject self
+  dependency(:player) { |game| ChattyPlayer.new "You're good at #{game.name}" }
+end
+
+player = Game.new('Monopoly').player
+player.message # => "You're good at Monopoly"
+
+player = Game.new('Monopoly').with_player { |game| ChattyPlayer.new "You're terrible at #{game.name}" }.player
+player.message # => "You're terrible at Monopoly"
+```
+
+Results are memoized.
+
+```ruby
+NamedPlayer = Struct.new :name
+
+class Game < Struct.new(:name)
+  Deject self
+
+  i = 0
+  dependency(:player) { NamedPlayer.new "Player#{i+=1}" }
+end
+
+game = Game.new
+game.player.name # => "Player1"
+game.player.name # => "Player1"
+
+Game.new.player.name # => "Player2"
+```
+
 
 Reasons
 =======
