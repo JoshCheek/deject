@@ -8,7 +8,7 @@ Install
 
 On most systems:
 
-    $ gem install deject # coming soon
+    $ gem install deject
 
 On some systems:
 
