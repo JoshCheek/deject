@@ -45,7 +45,7 @@ class Game
   dependency(:player) { ComputerPlayer.new }
 end
 
-Game.new.player # => #<Game:0x007fb504945f28>
+Game.new.player # => #<ComputerPlayer:0x007fb504945f28>
 <% end %>
 ```
 
