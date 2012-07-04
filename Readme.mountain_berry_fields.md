@@ -19,18 +19,25 @@ If you have to use sudo and you don't know why, it's because you need to set you
 Examples
 ========
 
+<% setup do %>
+$LOAD_PATH.unshift File.expand_path '../lib', __FILE__
+require 'deject'
+<% end %>
 
 Add Deject to your class.
 
 ```ruby
+<% test 'adding Deject to your class', with: :magic_comments do %>
 class Game
   Deject self
 end
+<% end %>
 ```
 
 Declare a dependency with a default.
 
 ```ruby
+<% test 'declaring a dependency with a default', with: :magic_comments do %>
 ComputerPlayer = Class.new
 
 class Game
@@ -38,12 +45,14 @@ class Game
   dependency(:player) { ComputerPlayer.new }
 end
 
-Game.new.player # => #<ComputerPlayer:0x007fb504945f28>
+Game.new.player # => #<Game:0x007fb504945f28>
+<% end %>
 ```
 
 Override the dependency for the class.
 
 ```ruby
+<% test 'override the dependency for the class', with: :magic_comments do %>
 ComputerPlayer = Class.new
 HumanPlayer    = Class.new
 
@@ -55,6 +64,7 @@ end
 Game.override(:player) { HumanPlayer.new } # in some initialization file
 
 Game.new.player # => #<HumanPlayer:0x007fde2d8ac880>
+<% end %>
 ```
 
 Override the dependency for an instance by using `#with_<dependency>`. You can
@@ -62,6 +72,7 @@ pass a specific object, or a block for lazy initialization. This method returns
 the instance.
 
 ```ruby
+<% test 'override the dependency for the instance', with: :magic_comments do %>
 ComputerPlayer = Class.new
 HumanPlayer    = Class.new
 MockPlayer     = Class.new
@@ -73,6 +84,7 @@ end
 
 Game.new.with_player(HumanPlayer.new).player   # => #<HumanPlayer:0x007fb2a1015e40>
 Game.new.with_player { MockPlayer.new }.player # => #<MockPlayer:0x007fb2a10155f8>
+<% end %>
 ```
 
 Set a global default value to be used when a value isn't explicitly provided.
@@ -80,6 +92,7 @@ If you are worried about clobbering a previously registered value, invoke as `.r
 this is turned off by default because I found that code reloading was horking everything up.
 
 ```ruby
+<% test 'declaring defaults', with: :magic_comments do %>
 ComputerPlayer = Class.new
 HumanPlayer    = Class.new
 
@@ -95,11 +108,13 @@ end
 
 Game.new.player1 # => #<HumanPlayer:0x007fed8212d7d0>
 Game.new.player2 # => #<ComputerPlayer:0x007fed8212d348>
+<% end %>
 ```
 
 Dependencies without a default block can passed to the Deject function.
 
 ```ruby
+<% test 'shorter syntax for when using default', with: :magic_comments do %>
 ComputerPlayer = Class.new
 
 class Game
@@ -107,11 +122,13 @@ class Game
 end
 
 Game.new.with_player(ComputerPlayer.new).player # => #<ComputerPlayer:0x007fac2393a248>
+<% end %>
 ```
 
 Anywhere a block is used, the instance is passed to it.
 
 ```ruby
+<% test 'instances are passed to blocks', with: :magic_comments do %>
 ChattyPlayer = Struct.new :message
 
 class Game < Struct.new(:name)
@@ -124,11 +141,13 @@ player.message # => "You're good at Monopoly"
 
 player = Game.new('Monopoly').with_player { |game| ChattyPlayer.new "You're terrible at #{game.name}" }.player
 player.message # => "You're terrible at Monopoly"
+<% end %>
 ```
 
 Results are memoized.
 
 ```ruby
+<% test 'results are memoized', with: :magic_comments do %>
 NamedPlayer = Struct.new :name
 
 class Game < Struct.new(:name)
@@ -143,6 +162,7 @@ game.player.name # => "Player1"
 game.player.name # => "Player1"
 
 Game.new.player.name # => "Player2"
+<% end %>
 ```
 
 
@@ -165,6 +185,7 @@ it still gets obnoxious.
 Example: passing dependency when initializing
 
 ```ruby
+<% test "example 1", with: :magic_comments do %>
 class SomeClass
   attr_accessor :some_dependency
 
@@ -192,12 +213,14 @@ class SomeClass
     self.some_dependency = options.fetch(:some_dependency) { default }
   end
 end
+<% end %>
 ```
 
 
 Example: try to set it in a method that you change later
 
 ```ruby
+<% test "example 2", with: :magic_comments do %>
 class SomeClass
   class << self
     attr_writer :some_dependency
@@ -223,12 +246,14 @@ end
 #                                              instance.some_dependency = override
 #                                              instance.whatever
 #      whereas Deject would be like this: SomeClass.new.with_some_dependency(override).whatever
+<% end %>
 ```
 
 
 Example: redefine the method
 
 ```ruby
+<% test 'redefining the method', with: :magic_comments do %>
 class SomeClass
   def some_dependency
     @some_dependency ||= default
@@ -247,11 +272,13 @@ end
 # someone refactors that main class... your redefinition of some_dependency just becomes
 # a definition. It doesn't fail, it has no idea about the method it's overriding,
 # or the changes that happened to it.
+<% end %>
 ```
 
 Compare the above examples to Deject
 
 ```ruby
+<% test 'compare to deject', with: :magic_comments do %>
 class SomeClass
   Deject self
   dependency(:some_dependency) { |instance| default }
@@ -260,6 +287,7 @@ end
 # straightforward (no one will be surprised when this changes),
 # declarative so easy to understand
 # convenient to override for all instances or any specific instance.
+<% end %>
 ```
 
 
