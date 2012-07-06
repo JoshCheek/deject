@@ -22,4 +22,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency "rspec"
   s.add_development_dependency "pry"
   s.add_development_dependency "rake"
+  s.add_development_dependency 'mountain_berry_fields'
+  s.add_development_dependency 'mountain_berry_fields-magic_comments'
 end
