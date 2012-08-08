@@ -5,6 +5,8 @@ About
 
 Simple dependency injection
 
+Note: This is only compatible with Ruby 1.9+
+
 Install
 =======
 
