@@ -7,14 +7,14 @@ describe Deject, '.register and registered' do
 
   it 'accepts a string' do
     Deject.register("abc") { value }
-    Deject.registered("abc").call.should == value
-    Deject.registered(:abc).call.should == value
+    expect(Deject.registered("abc").call).to eq value
+    expect(Deject.registered(:abc).call).to eq value
   end
 
   it 'accepts a symbol' do
     Deject.register(:abc) { value }
-    Deject.registered("abc").call.should == value
-    Deject.registered(:abc).call.should == value
+    expect(Deject.registered("abc").call).to eq value
+    expect(Deject.registered(:abc).call).to eq value
   end
 
   it 'register raises an ArgumentError if not provided with a block' do
@@ -24,12 +24,12 @@ describe Deject, '.register and registered' do
   it 'remembers what it was registered with' do
     i = 0
     Deject.register(:abc) { i += 1 }
-    Deject.registered(:abc).call.should == 1
-    i.should == 1
+    expect(Deject.registered(:abc).call).to eq 1
+    expect(i).to eq 1
   end
 
   it 'returns nil when asked for something not registered' do
-    Deject.registered(:abc).should == nil
+    expect(Deject.registered(:abc)).to eq nil
   end
 
   it 'does not raise an ArgumentError error if registration clobbers a previously set value' do
@@ -43,10 +43,10 @@ describe Deject, '.register and registered' do
   end
 
   it 'knows what has been registered' do
-    Deject.should_not be_registered :abc
-    Deject.should_not be_registered 'abc'
+    expect(Deject).to_not be_registered :abc
+    expect(Deject).to_not be_registered 'abc'
     Deject.register(:abc) {}
-    Deject.should be_registered :abc
-    Deject.should be_registered 'abc'
+    expect(Deject).to be_registered :abc
+    expect(Deject).to be_registered 'abc'
   end
 end

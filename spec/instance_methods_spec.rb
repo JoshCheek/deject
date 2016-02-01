@@ -6,21 +6,21 @@ describe 'after initializing a dependency' do
   specify '#<dependency> returns the result, initialized for each instance' do
     i = 0
     klass.dependency(:number) { i += 1 }
-    klass.new.number.should == 1
-    klass.new.number.should == 2
+    expect(klass.new.number).to eq 1
+    expect(klass.new.number).to eq 2
   end
 
   it 'memoizes the result' do
     i = 0
     klass.dependency(:number) { i += 1 }
     instance = klass.new
-    instance.number.should == 1
-    instance.number.should == 1
+    expect(instance.number).to eq 1
+    expect(instance.number).to eq 1
   end
 
   specify '#with_<dependency> overrides the result' do
     klass.dependency(:number) { 5 }
-    klass.new.with_number(6).number.should == 6
+    expect(klass.new.with_number(6).number).to eq 6
   end
 
   specify '#with_<dependency> can take a value or an init block' do
@@ -28,9 +28,9 @@ describe 'after initializing a dependency' do
     klass.dependency(:number2) { 2 }
     i = 0
     instance = klass.new.with_number2 { |instance| i += instance.number1 }
-    instance.number2.should == instance.number1
-    instance.number2.should == instance.number1
-    i.should == instance.number1
+    expect(instance.number2).to eq instance.number1
+    expect(instance.number2).to eq instance.number1
+    expect(i).to eq instance.number1
   end
 
   example 'you can override multiple defaults from the instance level by using with_dependencies' do
@@ -40,14 +40,14 @@ describe 'after initializing a dependency' do
       dependency(:b) { 2 }
     end
     instance = klass.new.with_dependencies(a: 10, b: 20)
-    instance.a.should == 10
-    instance.b.should == 20
+    expect(instance.a).to eq 10
+    expect(instance.b).to eq 20
   end
 
   specify '#with_<dependency> is passed the instance' do
     klass.dependency(:a) { |instance| instance.b }
     instance = klass.new
     def instance.b() 10 end
-    instance.a.should == instance.b
+    expect(instance.a).to eq instance.b
   end
 end

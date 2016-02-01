@@ -42,26 +42,26 @@ describe Deject, 'acceptance tests' do
     # using the default
     service = Service.new('josh')
     service.login
-    service.client.should have_logged_in 'josh'
-    service.client.should be_initialized_with service.credentials
+    expect(service.client).to have_logged_in 'josh'
+    expect(service.client).to be_initialized_with service.credentials
 
     # overriding the default at instance level
     client = double('Mock Client 1')
-    client.should_receive(:login).with('sally')
+    expect(client).to receive(:login).with('sally')
     Service.new('sally').with_client(client).login
 
     client_class, client = double, double
     george = Service.new('george').with_client { |service| client_class.new service.credentials }
-    client_class.should_receive(:new).with(george.credentials).and_return(client)
-    client.should_receive(:login).with('george')
+    expect(client_class).to receive(:new).with(george.credentials).and_return(client)
+    expect(client).to receive(:login).with('george')
     george.login
 
     # class default remains the same
-    Service.new('josh').client.should be_a_kind_of Client
+    expect(Service.new('josh').client).to be_a_kind_of Client
 
     # overriding the default at class level
     client = double('Mock Client 2')
-    client.should_receive(:login).with('mei')
+    expect(client).to receive(:login).with('mei')
     Service.override(:client) { client }
     Service.new('mei').login
   end
@@ -73,6 +73,6 @@ describe Deject, 'acceptance tests' do
     end
     expect { klass.new.client }.to raise_error Deject::UninitializedDependency
     client = double
-    klass.new.with_client(client).client.should be client
+    expect(klass.new.with_client(client).client).to eq client
   end
 end
